@@ -3,15 +3,22 @@ name: ci
 on:
   push:
     branches: [main]
+    paths: ['map/**', '.github/workflows/ci.yaml']
   pull_request:
+    paths: ['map/**', '.github/workflows/ci.yaml']
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  check:
+  map:
+    # Scoped to map/ so a server or mod change never rebuilds the map, and
+    # a tile change never touches the server images.
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: map
     steps:
       - uses: actions/checkout@v5
 
@@ -28,6 +35,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: map/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
 
       - name: Typecheck
@@ -46,5 +54,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: map/playwright-report/
           retention-days: 7
