@@ -1,0 +1,81 @@
+name: publish-itch
+
+# Manual or tag-driven, not every push: an itch upload is a public release,
+# and main moves for reasons that are not releases.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: butler channel
+        default: html5
+        required: false
+  push:
+    tags: ['map-v*']
+
+concurrency:
+  group: publish-itch
+  cancel-in-progress: false
+
+env:
+  ITCH_TARGET: kbve/palworld-map
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: map
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Require butler credentials
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::error::BUTLER_API_KEY is not set. Add it under Settings > Secrets > Actions."
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: map/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: map/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+
+      # Publishing a build that fails its own checks helps nobody.
+      - name: Validate assets
+        run: python3 e2e/validate_assets.py
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build
+        run: pnpm build
+
+      - name: Verify itch entrypoint
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html missing"; exit 1; }
+          echo "files: $(find dist -type f | wc -l)"
+
+      - name: Install butler
+        run: |
+          curl -sL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          "$RUNNER_TEMP/butler/butler" -V
+
+      - name: Push to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          CHANNEL: ${{ inputs.channel || 'html5' }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#map-v}"
+          [ "$VERSION" = "$GITHUB_REF_NAME" ] && VERSION="${GITHUB_SHA::7}"
+          echo "pushing $ITCH_TARGET:$CHANNEL as $VERSION"
+          # --if-changed makes re-runs cheap: butler skips when the build
+          # is byte-identical to what the channel already has.
+          "$RUNNER_TEMP/butler/butler" push dist "$ITCH_TARGET:$CHANNEL" \
+            --userversion "$VERSION" --if-changed

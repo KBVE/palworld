@@ -64,6 +64,23 @@ Always stub the live endpoints with `page.route`. A test that reaches
 `palworld.kbve.com` depends on the gameserver being up and will fail for
 reasons that have nothing to do with the change under test.
 
+## Publishing
+
+The map ships to itch.io as a static build. `.github/workflows/publish-itch.yaml`
+runs on `workflow_dispatch` or a `map-v*` tag — deliberately not on every
+push to main, since an itch upload is a public release and main moves for
+other reasons.
+
+It revalidates, typechecks, and builds before pushing, so a build that
+fails its own checks never reaches the store page. Requires a
+`BUTLER_API_KEY` secret; the workflow fails with a clear message if it is
+missing rather than half-publishing.
+
+`python3 tools/itch.py` regenerates the store images (630x500 cover,
+1920x620 banner) by stitching the real tile pyramid, so the store art
+cannot drift from the map. Output lands in `tools/out/`, which is
+gitignored — upload it to itch by hand.
+
 ## Working here
 
 `public/palworld/` is ~10,700 files. Never `grep`/`find` across it without
