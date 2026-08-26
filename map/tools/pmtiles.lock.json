@@ -1,0 +1,12 @@
+{
+  "tiles": {
+    "bytes": 10390444,
+    "source_hash": "e9aa0b621a4234bf4cbd4c2e16246f3ff4c4748fea36ce6580b8cd7fd3bdbaa8",
+    "tiles": 5461
+  },
+  "wt-overlay": {
+    "bytes": 13232476,
+    "source_hash": "eee4cfd93c7bc7e5360784aa0ceb42795b88bf25ddfc4fc2850349b6de33486c",
+    "tiles": 5169
+  }
+}

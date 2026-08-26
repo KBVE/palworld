@@ -29,8 +29,10 @@ zip on processing. Loose tiles live in `tiles-src/`, deliberately outside
 
     tools/.venv/bin/python tools/build_pmtiles.py
 
-`pnpm validate` fails if an archive is older than its source, so a stale
-archive cannot ship silently.
+`pnpm validate` compares a content hash of `tiles-src/` against
+`tools/pmtiles.lock.json`, so a stale archive cannot ship silently. It is
+a hash rather than a timestamp because git does not preserve mtimes — on
+a fresh checkout every file shares one arbitrary time.
 
 The overlay sits at negative tile coordinates, which PMTiles cannot
 address, so each zoom is shifted to a non-negative origin and the shift is

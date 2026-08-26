@@ -21,6 +21,7 @@ in the archive metadata for the client to undo.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections import defaultdict
@@ -71,6 +72,24 @@ def collect(layer: Path) -> dict[int, dict[tuple[int, int], Path]]:
                 except ValueError:
                     continue
     return out
+
+
+def source_hash(layer: Path) -> str:
+    """Content hash of every source tile in a layer.
+
+    Covers all tiles, including zoom levels the archive drops, so the
+    check answers "does this archive correspond to the current source"
+    rather than "does it match the subset that happened to be packed".
+
+    Freshness cannot be judged by mtime: git does not preserve it, so a
+    fresh checkout gives every file the same timestamp in arbitrary order.
+    Hashing the bytes is the only check that survives a clone.
+    """
+    h = hashlib.sha256()
+    for p in sorted(layer.rglob("*.webp"), key=lambda p: p.relative_to(layer).as_posix()):
+        h.update(p.relative_to(layer).as_posix().encode())
+        h.update(hashlib.sha1(p.read_bytes()).digest())
+    return h.hexdigest()
 
 
 def build(layer_name: str, dest: Path) -> dict[str, object]:
@@ -155,6 +174,7 @@ def build(layer_name: str, dest: Path) -> dict[str, object]:
     zooms = sorted(by_zoom)
     return {
         "layer": layer_name,
+        "source_hash": source_hash(layer),
         "tiles": len(entries),
         "zooms": f"z{zooms[0]}..z{zooms[-1]}",
         "bytes": dest.stat().st_size,
@@ -168,9 +188,17 @@ def main() -> int:
     ap.add_argument("--layer", choices=LAYERS, help="only build one layer")
     args = ap.parse_args()
 
+    lock_path = Path(__file__).parent / "pmtiles.lock.json"
+    lock = json.loads(lock_path.read_text()) if lock_path.is_file() else {}
+
     for name in [args.layer] if args.layer else LAYERS:
         dest = DEST / f"{name}.pmtiles"
         info = build(name, dest)
+        lock[name] = {
+            "source_hash": info["source_hash"],
+            "tiles": info["tiles"],
+            "bytes": info["bytes"],
+        }
         print(
             f"{info['layer']:11} {info['tiles']:>6} tiles  {info['zooms']:9} "
             f"-> {dest.name}  {info['bytes'] / 1e6:.1f} MB"
@@ -179,6 +207,9 @@ def main() -> int:
             print(f"            shifted: {info['shifted']}")
         if info["skipped"]:
             print(f"            skipped (too wide for the grid): {', '.join(info['skipped'])}")
+
+    lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
+    print(f"wrote {lock_path.name}")
     return 0
 
 

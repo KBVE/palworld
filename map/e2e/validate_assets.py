@@ -237,13 +237,18 @@ def check_pyramids() -> None:
 
 
 def check_archives() -> None:
-    """The shipped archives must exist and be newer than their source.
+    """The shipped archives must exist and match their source tiles.
 
-    The loose tiles under tiles-src/ are the source of truth but are never
-    served; public/ ships the packed archives. A stale archive means the
-    map renders tiles that no longer match the source, which nothing else
-    would catch.
+    Freshness is judged by content hash, not mtime: git does not preserve
+    timestamps, so on a fresh checkout every file shares one arbitrary
+    mtime and any comparison between them is noise.
     """
+    lock_path = ROOT / "tools" / "pmtiles.lock.json"
+    if not lock_path.is_file():
+        error("tools/pmtiles.lock.json is missing — run tools/build_pmtiles.py")
+        return
+    lock = json.loads(read(lock_path))
+
     for layer in ("tiles", "wt-overlay"):
         archive = ASSETS / f"{layer}.pmtiles"
         src = TILES_SRC / layer
@@ -253,15 +258,33 @@ def check_archives() -> None:
                 f"tools/.venv/bin/python tools/build_pmtiles.py"
             )
             continue
-        if not src.is_dir():
+
+        entry = lock.get(layer)
+        if not entry:
+            error(f"tools/pmtiles.lock.json has no entry for {layer}")
             continue
-        newest = max((p.stat().st_mtime for p in src.rglob("*.webp")), default=0)
-        if newest > archive.stat().st_mtime:
+
+        if not src.is_dir():
+            error(f"missing tile source: tiles-src/{layer}")
+            continue
+
+        # Mirrors source_hash() in tools/build_pmtiles.py.
+        h = hashlib.sha256()
+        tiles = sorted(src.rglob("*.webp"), key=lambda p: p.relative_to(src).as_posix())
+        for p in tiles:
+            h.update(p.relative_to(src).as_posix().encode())
+            h.update(hashlib.sha1(p.read_bytes()).digest())
+
+        if h.hexdigest() != entry["source_hash"]:
             error(
-                f"{layer}.pmtiles is older than tiles-src/{layer} — "
+                f"{layer}.pmtiles does not match tiles-src/{layer} — "
                 f"rebuild it with tools/build_pmtiles.py"
             )
-        print(f"  {layer}.pmtiles: {archive.stat().st_size / 1e6:.1f} MB")
+        else:
+            print(
+                f"  {layer}.pmtiles: {archive.stat().st_size / 1e6:.1f} MB, "
+                f"{entry['tiles']:,} tiles, source hash matches"
+            )
 
 
 def check_limits() -> None:
