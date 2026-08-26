@@ -851,7 +851,7 @@ export default function ReactPalworldMap() {
 		};
 
 		const countTexts = new Map<number, Text>();
-		const control = new L.Control({ position: 'topright' });
+		const control = new L.Control({ position: 'topleft' });
 		control.onAdd = () => {
 			const div = L.DomUtil.create('div', 'pal-map-filters');
 			div.style.cssText =
