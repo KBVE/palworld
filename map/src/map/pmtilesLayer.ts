@@ -24,6 +24,16 @@ export interface PMTilesLayerOptions extends L.GridLayerOptions {
 	errorTileUrl?: string;
 }
 
+/** Fired once the first tile of any archive has decoded. */
+export const FIRST_TILE_EVENT = 'palmap:first-tile';
+
+let announced = false;
+function announceFirstTile(): void {
+	if (announced) return;
+	announced = true;
+	document.dispatchEvent(new CustomEvent(FIRST_TILE_EVENT));
+}
+
 const TRANSPARENT =
 	'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
@@ -58,6 +68,7 @@ export async function pmtilesLayer(
 						done(undefined, img);
 						return;
 					}
+					announceFirstTile();
 					const blob = new Blob([tile.data], { type: 'image/webp' });
 					const objectUrl = URL.createObjectURL(blob);
 					// Leaflet reuses tile elements, so the blob has to be

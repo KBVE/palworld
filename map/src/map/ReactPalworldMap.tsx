@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { pmtilesLayer } from './pmtilesLayer';
+import { ASSET_BASE } from '../assetBase';
 import 'leaflet/dist/leaflet.css';
 import { DroidEvents } from '../events';
 import { startLivePoller, type LiveSnapshot } from './livePoller';
@@ -19,9 +20,9 @@ import {
 } from './markerEcs';
 
 const MAX_ZOOM = 8;
-const PAL_TILE_BASE = '/palworld/tiles';
+const PAL_TILE_BASE = `${ASSET_BASE}palworld/tiles`;
 const PAL_MAX_NATIVE_ZOOM = 6;
-const WT_TILE_BASE = '/palworld/wt-overlay';
+const WT_TILE_BASE = `${ASSET_BASE}palworld/wt-overlay`;
 const LIVE_URL_DEFAULT = 'https://palworld.kbve.com/live/players';
 const LERP_MS = 4000;
 const TIMERS_KEY = 'palworld-map-timers';
@@ -739,7 +740,7 @@ export default function ReactPalworldMap() {
 			const initial = esc((p.name || p.id).charAt(0).toUpperCase());
 			return (
 				`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.07)">` +
-				`<img src="/palworld/palicons/T_${clean}_icon_normal.webp" width="34" height="34" loading="lazy" ` +
+				`<img src="${ASSET_BASE}palworld/palicons/T_${clean}_icon_normal.webp" width="34" height="34" loading="lazy" ` +
 				`style="border-radius:50%;background:#0d1524" ` +
 				`onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>` +
 				`<span style="display:none;width:34px;height:34px;border-radius:50%;background:#173042;color:#7dd3fc;` +

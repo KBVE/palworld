@@ -6,6 +6,7 @@ import {
 	query,
 } from 'bitecs';
 import pois from './pois.json';
+import { ASSET_BASE } from '../assetBase';
 
 const MAIN_X0 = -1099400;
 const MAIN_Y0 = -724400;
@@ -46,49 +47,49 @@ export const KIND_META: Record<
 	fastTravel: {
 		label: 'Fast Travel',
 		plural: 'Fast Travel',
-		icon: '/palworld/ui/T_icon_compass_FTtower.png',
+		icon: `${ASSET_BASE}palworld/ui/T_icon_compass_FTtower.png`,
 		size: 26,
 		minZoom: 2,
 	},
 	tower: {
 		label: 'Syndicate Tower',
 		plural: 'Syndicate Towers',
-		icon: '/palworld/ui/T_icon_compass_tower.png',
+		icon: `${ASSET_BASE}palworld/ui/T_icon_compass_tower.png`,
 		size: 30,
 		minZoom: 0,
 	},
 	dungeon: {
 		label: 'Dungeon',
 		plural: 'Dungeons',
-		icon: '/palworld/ui/T_icon_compass_dungeon.png',
+		icon: `${ASSET_BASE}palworld/ui/T_icon_compass_dungeon.png`,
 		size: 24,
 		minZoom: 3,
 	},
 	note: {
 		label: 'Journal Note',
 		plural: 'Journal Notes',
-		icon: '/palworld/ui/note-loc.png',
+		icon: `${ASSET_BASE}palworld/ui/note-loc.png`,
 		size: 20,
 		minZoom: 4,
 	},
 	skillFruit: {
 		label: 'Skill Fruit Tree',
 		plural: 'Skill Fruit Trees',
-		icon: '/palworld/ui/fruit-loc.png',
+		icon: `${ASSET_BASE}palworld/ui/fruit-loc.png`,
 		size: 22,
 		minZoom: 4,
 	},
 	effigy: {
 		label: 'Lifmunk Effigy',
 		plural: 'Lifmunk Effigies',
-		icon: '/palworld/ui/lifmunk_effigy.png',
+		icon: `${ASSET_BASE}palworld/ui/lifmunk_effigy.png`,
 		size: 16,
 		minZoom: 5,
 	},
 	egg: {
 		label: 'Egg',
 		plural: 'Eggs',
-		icon: '/palworld/ui/egg-loc.png',
+		icon: `${ASSET_BASE}palworld/ui/egg-loc.png`,
 		size: 22,
 		minZoom: 4,
 	},
@@ -102,14 +103,14 @@ export const KIND_META: Record<
 	crudeOil: {
 		label: 'Crude Oil',
 		plural: 'Crude Oil',
-		icon: '/palworld/ui/oil-loc.webp',
+		icon: `${ASSET_BASE}palworld/ui/oil-loc.webp`,
 		size: 18,
 		minZoom: 4,
 	},
 	oilRig: {
 		label: 'Oil Rig',
 		plural: 'Oil Rigs',
-		icon: '/palworld/ui/oil-rig.webp',
+		icon: `${ASSET_BASE}palworld/ui/oil-rig.webp`,
 		size: 30,
 		minZoom: 0,
 	},
@@ -182,7 +183,7 @@ export function createMarkerWorld() {
 			b.y,
 			KIND.boss,
 			`${b.name} · Lv ${b.lv}`,
-			`/palworld/palicons/${b.icon}.webp`,
+			`${ASSET_BASE}palworld/palicons/${b.icon}.webp`,
 		);
 	return world;
 }

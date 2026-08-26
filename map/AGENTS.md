@@ -110,6 +110,20 @@ failure costs seconds rather than a full build.
 cannot drift from the map. Output lands in `tools/out/`, which is
 gitignored — upload it to itch by hand.
 
+## Hosting constraints
+
+itch serves a build from `html-classic.itch.zone/html/<id>/`, a subpath.
+Vite's `base` is `'./'` and every runtime asset path goes through
+`ASSET_BASE` in `src/assetBase.ts` for that reason — an absolute `/assets/…`
+or `/palworld/…` resolves against the CDN root and 404s. Do not reintroduce
+a leading slash in an asset path.
+
+That host does honour HTTP range requests, which is what makes the PMTiles
+archives viable there. A host that ignores `Range` returns the whole file
+with a 200 and the tiles silently fail to render — no console error, no
+404, just a black map. Worth remembering before moving the build anywhere
+new.
+
 ## Working here
 
 `tiles-src/` is ~10,600 files. Never `grep`/`find` across it without a

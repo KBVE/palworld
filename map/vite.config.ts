@@ -2,6 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+	// itch.io serves HTML5 builds from html-classic.itch.zone/html/<id>/,
+	// so absolute URLs resolve to the CDN root and 404. Everything must be
+	// relative to index.html.
+	base: './',
 	plugins: [react()],
 	resolve: {
 		alias: {

@@ -9,9 +9,36 @@
 			body { background: #0b0f14; color: #e6edf3; font-family: system-ui, sans-serif; }
 			.pal-map-panel { width: 100%; height: 100%; overflow: hidden; }
 			.pal-map-panel > div { height: 100%; }
+
+			/* Tiles arrive from PMTiles archives over range requests, so the
+			   first paint waits on an archive header fetch. Without this the
+			   map is an unexplained black rectangle for a beat. */
+			#loading {
+				position: fixed; inset: 0; display: grid; place-items: center;
+				background: #0b0f14; color: #8b9bb0;
+				font: 14px/1.6 system-ui, sans-serif;
+				transition: opacity .4s ease; z-index: 9999;
+			}
+			#loading[hidden] { display: none; }
+			#loading.done { opacity: 0; pointer-events: none; }
+			#loading .spinner {
+				width: 28px; height: 28px; margin: 0 auto .75rem;
+				border: 3px solid #1b2838; border-top-color: #38bdf8;
+				border-radius: 50%; animation: spin .9s linear infinite;
+			}
+			@keyframes spin { to { transform: rotate(360deg); } }
+			@media (prefers-reduced-motion: reduce) {
+				#loading .spinner { animation: none; }
+			}
 		</style>
 	</head>
 	<body>
+		<div id="loading">
+			<div>
+				<div class="spinner"></div>
+				Loading map&hellip;
+			</div>
+		</div>
 		<div id="root"></div>
 		<script type="module" src="/src/main.tsx"></script>
 	</body>
