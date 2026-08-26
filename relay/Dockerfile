@@ -4,9 +4,10 @@ FROM --platform=linux/amd64 rust:${RUST_VERSION}-bookworm AS builder
 ENV CARGO_INCREMENTAL=0
 WORKDIR /build
 
-COPY apps/agones/palworld/relay/Cargo.workspace.toml Cargo.toml
-COPY apps/agones/palworld/relay apps/agones/palworld/relay
-COPY packages/rust/jedi packages/rust/jedi
+# Build context is the repo root. jedi comes from crates.io now, so
+# there is nothing to vendor.
+COPY Cargo.toml Cargo.lock ./
+COPY relay relay
 
 RUN --mount=type=cache,target=/build/target,id=agones-palworld-relay-target \
     --mount=type=cache,target=/usr/local/cargo/registry,id=cargo-registry \

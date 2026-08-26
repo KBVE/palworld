@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ['mods/**', '.github/workflows/mods.yaml']
 
+# Checks never write; the default token scope is wider than needed.
+permissions:
+  contents: read
+
 concurrency:
   group: mods-${{ github.ref }}
   cancel-in-progress: true
@@ -24,6 +28,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: mods/chef_paldon_yumsay/build/requirements.txt
       - name: Install
         run: pip install -r requirements.txt pytest
       - name: Test

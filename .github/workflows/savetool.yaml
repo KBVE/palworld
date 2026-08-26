@@ -1,0 +1,38 @@
+name: savetool
+
+on:
+  push:
+    branches: [main]
+    paths: ['savetool/**', '.github/workflows/savetool.yaml']
+  pull_request:
+    paths: ['savetool/**', '.github/workflows/savetool.yaml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: savetool-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: savetool
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      # save_intel.py imports PalworldSaveTools lazily, inside the
+      # functions that parse saves, so the tests run on the standard
+      # library alone. Installing requirements.txt here would clone a
+      # pinned git dependency and compile it for no benefit, and would
+      # fail whenever that upstream is unreachable.
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Test
+        run: python -m pytest -q

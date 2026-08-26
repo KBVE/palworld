@@ -31,12 +31,12 @@ RUN set -eux \
     && rm -f /tmp/palschema.zip \
     && rm -rf /var/lib/apt/lists/*
 
-COPY apps/agones/palworld/mods/PalChatRelay /opt/palchatrelay/PalChatRelay
-COPY apps/agones/palworld/mods/PalEventRelay /opt/palchatrelay/PalEventRelay
-COPY apps/agones/palworld/mods/PalForge /opt/palchatrelay/PalForge
-COPY apps/agones/palworld/mods/PalSchema /opt/palchatrelay/PalSchema-overlay
-COPY apps/agones/palworld/overlay.sh /opt/palchatrelay/overlay.sh
-COPY apps/agones/palworld/shim/agones-shim-prestop.sh /usr/local/bin/agones-shim-prestop
+COPY mods/PalChatRelay /opt/palchatrelay/PalChatRelay
+COPY mods/PalEventRelay /opt/palchatrelay/PalEventRelay
+COPY mods/PalForge /opt/palchatrelay/PalForge
+COPY mods/PalSchema /opt/palchatrelay/PalSchema-overlay
+COPY server/overlay.sh /opt/palchatrelay/overlay.sh
+COPY server/shim/agones-shim-prestop.sh /usr/local/bin/agones-shim-prestop
 RUN chmod +x /opt/palchatrelay/overlay.sh /usr/local/bin/agones-shim-prestop \
     && chmod -R a+rX /opt/palchatrelay \
     && chown -R 1000:1000 /opt/palchatrelay \

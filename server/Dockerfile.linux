@@ -17,14 +17,14 @@ RUN set -eux; \
     install -m 0644 /tmp/libUE4SS.so /opt/ue4ss/libUE4SS.so; \
     rm /tmp/libUE4SS.so
 
-COPY apps/agones/palworld/ue4ss/UE4SS-settings.ini /opt/ue4ss/UE4SS-settings.ini
-COPY apps/agones/palworld/mods/mods.txt /opt/ue4ss/Mods/mods.txt
-COPY apps/agones/palworld/mods/PalChatRelay /opt/ue4ss/Mods/PalChatRelay
-COPY apps/agones/palworld/ue4ss-launch.sh /usr/local/bin/ue4ss-launch
+COPY server/ue4ss/UE4SS-settings.ini /opt/ue4ss/UE4SS-settings.ini
+COPY mods/mods.txt /opt/ue4ss/Mods/mods.txt
+COPY mods/PalChatRelay /opt/ue4ss/Mods/PalChatRelay
+COPY server/ue4ss-launch.sh /usr/local/bin/ue4ss-launch
 RUN set -eux; \
     chmod +x /usr/local/bin/ue4ss-launch; \
     sed -i 's|^"\${STARTCOMMAND\[@\]}"|/usr/local/bin/ue4ss-launch "${STARTCOMMAND[@]}"|' /home/steam/server/start.sh; \
     grep -q 'ue4ss-launch "\${STARTCOMMAND\[@\]}"' /home/steam/server/start.sh
 
-COPY apps/agones/palworld/shim/agones-shim-prestop.sh /usr/local/bin/agones-shim-prestop
+COPY server/shim/agones-shim-prestop.sh /usr/local/bin/agones-shim-prestop
 RUN chmod +x /usr/local/bin/agones-shim-prestop

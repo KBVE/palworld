@@ -1,0 +1,110 @@
+name: images
+
+# Version-gated, like the itch publish: each area's version.toml is the
+# source of truth, and an image is built only when its version has no tag
+# in the registry yet. deploy/ pins exact versions, so a rebuild that
+# silently replaced an existing tag would change what the cluster runs
+# without any manifest saying so.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'relay/**'
+      - 'server/**'
+      - 'savetool/**'
+      - 'mods/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/images.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: kbve
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      any: ${{ steps.plan.outputs.any }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: plan
+        name: Decide what needs building
+        run: |
+          set -euo pipefail
+          # image name : version file : dockerfile
+          ENTRIES="agones-palworld-relay:relay/version.toml:relay/Dockerfile
+          agones-palworld:server/version.toml:server/Dockerfile
+          agones-palworld-savetool:savetool/version.toml:savetool/Dockerfile"
+
+          BUILD='[]'
+          while IFS=: read -r name vfile dfile; do
+            [ -z "$name" ] && continue
+            name=$(echo "$name" | xargs)
+            VERSION=$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$vfile")
+            if [ -z "$VERSION" ]; then
+              echo "::error::no version in $vfile"; exit 1
+            fi
+            REF="${REGISTRY}/${OWNER}/${name}:${VERSION}"
+            if docker manifest inspect "$REF" >/dev/null 2>&1; then
+              echo "  $REF already published — skipping"
+            else
+              echo "  $REF needs building"
+              BUILD=$(echo "$BUILD" | jq -c --arg n "$name" --arg v "$VERSION" --arg d "$dfile" \
+                '. + [{name:$n, version:$v, dockerfile:$d}]')
+            fi
+          done <<< "$ENTRIES"
+
+          echo "matrix=$(echo "$BUILD" | jq -c '{include: .}')" >> "$GITHUB_OUTPUT"
+          echo "any=$([ "$(echo "$BUILD" | jq 'length')" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.name }}:${{ matrix.version }}
+        uses: docker/build-push-action@v6
+        with:
+          # Every Dockerfile expects the repo root as context: the server
+          # images copy from mods/, the relay copies the workspace manifest.
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64
+          tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}:${{ matrix.version }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max

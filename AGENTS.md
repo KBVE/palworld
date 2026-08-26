@@ -8,7 +8,8 @@ live API it reads, the server images, and the mods.
 ```
 map/       interactive map — vite + leaflet, pmtiles archives, static build
 relay/     live API (rust) serving /live/players and /live/bases
-server/    gameserver images, docker-compose
+server/    gameserver images, docker-compose, ue4ss + shim scripts
+savetool/  save parser (python) feeding the relay's /live/bases
 mods/      PalForge, PalSchema, chat/event relays, food mods
 deploy/    kubernetes manifests, reconciled by ArgoCD
 data/      clickhouse schema the relay writes to
@@ -30,6 +31,18 @@ contract is invisible from here, which is why `relay/AGENTS.md` treats
 those responses as published — add fields, never rename or remove.
 
 ## Rules
+
+**Images are version-gated, not commit-gated.** Each of `relay/`,
+`server/`, and `savetool/` carries a `version.toml`, and
+`.github/workflows/images.yaml` builds an image only when that version has
+no tag in ghcr yet. `deploy/` pins exact versions, so silently replacing
+an existing tag would change what the cluster runs with no manifest
+saying so. Bump the `version.toml` to ship.
+
+**Dockerfiles build from the repo root.** The server images copy from
+`mods/`, and the relay copies the workspace manifest, so every `docker
+build` needs `-f <area>/Dockerfile .` from the top. They previously used
+monorepo-relative paths and had to be rewritten.
 
 **Deploy targets differ per area.** `map/` builds to a static bundle and
 ships to itch; `relay/` and `server/` build container images; `deploy/` is

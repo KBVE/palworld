@@ -104,6 +104,13 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # Chromium is ~150 MB per run without this.
+      - name: Cache playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('map/pnpm-lock.yaml') }}
       - name: Install browser
         run: pnpm exec playwright install --with-deps chromium
       - name: E2E

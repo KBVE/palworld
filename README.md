@@ -9,6 +9,7 @@ Everything for the KBVE Palworld gameserver.
 | `server/` | Gameserver images and compose files                         |
 | `mods/`   | PalForge, PalSchema, chat/event relays, food mods           |
 | `deploy/` | Kubernetes manifests, reconciled by ArgoCD                  |
+| `savetool/` | Save parser feeding the relay's `/live/bases`             |
 | `data/`   | ClickHouse schema the relay writes to                       |
 
 ## Map
@@ -27,4 +28,14 @@ pnpm build      # -> map/dist
 ```bash
 cargo check --workspace
 cargo test --workspace
+```
+
+## Images
+
+`relay`, `server`, and `savetool` each carry a `version.toml`. CI builds
+and pushes to ghcr only when that version is not already published, since
+`deploy/` pins exact tags.
+
+```bash
+docker build -f relay/Dockerfile -t agones-palworld-relay .   # context is the repo root
 ```
