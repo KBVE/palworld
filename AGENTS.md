@@ -41,6 +41,18 @@ static JSON in this repo.
 **No game builds here.** This is a map, not a playable build. Anything
 with a wasm/engine export ships to itch instead.
 
+## Validating
+
+`pnpm validate` (`e2e/validate_assets.py`, stdlib only) checks the static
+assets against what the code actually asks for: every `KIND_META` icon and
+every boss palicon resolves, POI coordinates land inside `worldBounds`,
+each tile layer has the zoom levels the component declares, and the
+deployment stays under the Pages caps.
+
+It parses the projection constants and bounds out of the source rather
+than duplicating them, so retuning the map updates the checks too. Run it
+after touching tiles, icons, or `pois.json`.
+
 ## Working here
 
 `public/palworld/` is ~10,700 files. Never `grep`/`find` across it without
