@@ -1,6 +1,7 @@
 {
   "name": "palworld-map",
   "private": true,
+  "packageManager": "pnpm@11.15.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
