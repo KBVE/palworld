@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import { pmtilesLayer } from './pmtilesLayer';
 import 'leaflet/dist/leaflet.css';
 import { DroidEvents } from '../events';
 import { startLivePoller, type LiveSnapshot } from './livePoller';
@@ -94,28 +95,37 @@ export default function ReactPalworldMap() {
 			markerZoomAnimation: false,
 		});
 		map.fitBounds(worldBounds);
-		L.tileLayer(`${PAL_TILE_BASE}/{z}/{x}/{y}.webp`, {
-			tileSize: 256,
-			minZoom: 0,
-			maxZoom: MAX_ZOOM,
-			maxNativeZoom: PAL_MAX_NATIVE_ZOOM,
-			noWrap: true,
-			bounds: palBounds,
-			keepBuffer: 4,
-			updateWhenIdle: false,
-			updateWhenZooming: false,
-		}).addTo(map);
-		L.tileLayer(`${WT_TILE_BASE}/{z}/{x}/{y}.webp`, {
-			tileSize: 256,
-			minZoom: 0,
-			maxZoom: MAX_ZOOM,
-			maxNativeZoom: MAX_ZOOM,
-			noWrap: true,
-			bounds: wtBounds,
-			keepBuffer: 4,
-			updateWhenIdle: false,
-			updateWhenZooming: false,
-		}).addTo(map);
+		// Tiles come from PMTiles archives rather than loose files: itch.io
+		// caps an HTML5 project at 1000 files and the two pyramids alone are
+		// ~10,600. Each archive reports its own native zoom range, so
+		// maxNativeZoom is read from metadata instead of hardcoded here.
+		let tilesDisposed = false;
+		const tileLayers: L.GridLayer[] = [];
+		void (async () => {
+			const shared = {
+				tileSize: 256,
+				minZoom: 0,
+				maxZoom: MAX_ZOOM,
+				noWrap: true,
+				keepBuffer: 4,
+				updateWhenIdle: false,
+				updateWhenZooming: false,
+			} as const;
+			const [base, overlay] = await Promise.all([
+				pmtilesLayer(`${PAL_TILE_BASE}.pmtiles`, {
+					...shared,
+					bounds: palBounds,
+				}),
+				pmtilesLayer(`${WT_TILE_BASE}.pmtiles`, {
+					...shared,
+					bounds: wtBounds,
+				}),
+			]);
+			if (tilesDisposed) return;
+			base.addTo(map);
+			overlay.addTo(map);
+			tileLayers.push(base, overlay);
+		})();
 
 		map.createPane('palpois');
 		const pane = map.getPane('palpois')!;
@@ -997,6 +1007,8 @@ export default function ReactPalworldMap() {
 
 		return () => {
 			stopped = true;
+			tilesDisposed = true;
+			for (const layer of tileLayers) map.removeLayer(layer);
 			DroidEvents.off('palworld-live-snapshot', onSnapshot);
 			clearInterval(cooldownTick);
 			clearInterval(basesTick);

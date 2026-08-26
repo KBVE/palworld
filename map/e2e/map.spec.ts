@@ -93,11 +93,17 @@ test('renders the map without console errors or broken assets', async ({ page })
 	expect(consoleErrors, 'console errors').toEqual([]);
 });
 
-test('loads tiles from both pyramids', async ({ page }) => {
+test('reads both pyramids from their pmtiles archives', async ({ page }) => {
+	// Tiles ship as two PMTiles archives rather than ~10,600 loose files,
+	// because itch caps an HTML5 project at 1000. The client reads them
+	// with range requests, so a partial response is the success signal.
 	const layers = new Set<string>();
-	page.on('request', (req) => {
-		const m = new URL(req.url()).pathname.match(/^\/palworld\/(tiles|wt-overlay)\//);
-		if (m) layers.add(m[1]);
+	let ranged = 0;
+	page.on('response', (res) => {
+		const m = new URL(res.url()).pathname.match(/^\/palworld\/(tiles|wt-overlay)\.pmtiles$/);
+		if (!m) return;
+		layers.add(m[1]);
+		if (res.status() === 206) ranged += 1;
 	});
 
 	await stubLive(page);
@@ -106,7 +112,9 @@ test('loads tiles from both pyramids', async ({ page }) => {
 	await expect
 		.poll(() => [...layers].sort(), { timeout: 15_000 })
 		.toEqual(['tiles', 'wt-overlay']);
+	await expect.poll(() => ranged, { timeout: 15_000 }).toBeGreaterThan(0);
 });
+
 
 test('renders a filter toggle for every marker kind', async ({ page }) => {
 	await stubLive(page);

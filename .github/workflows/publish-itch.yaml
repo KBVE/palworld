@@ -58,10 +58,19 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Verify itch entrypoint
+      # itch enforces a 1000-file cap when it processes the upload, not
+      # when butler pushes it. Without this guard a publish "succeeds" and
+      # the store page is broken.
+      - name: Verify itch constraints
         run: |
           test -f dist/index.html || { echo "::error::dist/index.html missing"; exit 1; }
-          echo "files: $(find dist -type f | wc -l)"
+          COUNT=$(find dist -type f | wc -l | tr -d ' ')
+          echo "dist files: $COUNT"
+          if [ "$COUNT" -gt 1000 ]; then
+            echo "::error::dist has $COUNT files, over itch's 1000 cap."
+            echo "::error::Tiles must ship as PMTiles archives, not loose files."
+            exit 1
+          fi
 
       - name: Install butler
         run: |

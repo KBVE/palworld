@@ -23,11 +23,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 ASSETS = PUBLIC / "palworld"
+TILES_SRC = ROOT / "tiles-src"
 SRC = ROOT / "src" / "map"
 
 # Cloudflare Pages deployment limits.
 MAX_FILES = 20_000
 MAX_FILE_BYTES = 25 * 1024 * 1024
+
+# itch.io refuses an HTML5 zip with more files than this. It is far
+# tighter than the Pages cap and is what forced the PMTiles packing, so it
+# is the limit worth guarding.
+MAX_ITCH_FILES = 1_000
 
 # Declared in markerEcs.ts; a tile pyramid covers 0..256 units on both axes.
 UNIT_SPAN = 256
@@ -201,7 +207,7 @@ def check_boss_icons() -> None:
 
 
 def check_pyramids() -> None:
-    """Each tile layer must have the zoom levels the component requests."""
+    """Each source layer must cover the zooms the component declares."""
     s = read(SRC / "ReactPalworldMap.tsx")
 
     def num(name: str) -> int | None:
@@ -214,12 +220,10 @@ def check_pyramids() -> None:
         error("ReactPalworldMap.tsx: cannot read MAX_ZOOM / PAL_MAX_NATIVE_ZOOM")
         return
 
-    # Base layer upsamples past its native zoom; the overlay renders native
-    # all the way to MAX_ZOOM.
     for layer, native in (("tiles", pal_native), ("wt-overlay", max_zoom)):
-        d = ASSETS / layer
+        d = TILES_SRC / layer
         if not d.is_dir():
-            error(f"missing tile layer: {layer}")
+            error(f"missing tile source: tiles-src/{layer}")
             continue
         zooms = sorted(int(p.name) for p in d.iterdir() if p.is_dir() and p.name.isdigit())
         if not zooms:
@@ -232,13 +236,46 @@ def check_pyramids() -> None:
             error(f"{layer}: gap in zoom levels {missing} (has {zooms})")
 
 
+def check_archives() -> None:
+    """The shipped archives must exist and be newer than their source.
+
+    The loose tiles under tiles-src/ are the source of truth but are never
+    served; public/ ships the packed archives. A stale archive means the
+    map renders tiles that no longer match the source, which nothing else
+    would catch.
+    """
+    for layer in ("tiles", "wt-overlay"):
+        archive = ASSETS / f"{layer}.pmtiles"
+        src = TILES_SRC / layer
+        if not archive.is_file():
+            error(
+                f"{layer}.pmtiles is missing — run "
+                f"tools/.venv/bin/python tools/build_pmtiles.py"
+            )
+            continue
+        if not src.is_dir():
+            continue
+        newest = max((p.stat().st_mtime for p in src.rglob("*.webp")), default=0)
+        if newest > archive.stat().st_mtime:
+            error(
+                f"{layer}.pmtiles is older than tiles-src/{layer} — "
+                f"rebuild it with tools/build_pmtiles.py"
+            )
+        print(f"  {layer}.pmtiles: {archive.stat().st_size / 1e6:.1f} MB")
+
+
 def check_limits() -> None:
     """Guard the Cloudflare Pages caps before a deploy discovers them."""
     files = [p for p in PUBLIC.rglob("*") if p.is_file()]
+    if len(files) > MAX_ITCH_FILES:
+        error(
+            f"public/ has {len(files):,} files, over itch's {MAX_ITCH_FILES:,} "
+            f"cap — the build will upload but itch will refuse to process it"
+        )
+    elif len(files) > MAX_ITCH_FILES * 0.8:
+        warn(f"public/ has {len(files):,} files, past 80% of itch's {MAX_ITCH_FILES:,} cap")
     if len(files) > MAX_FILES:
         error(f"public/ has {len(files):,} files, over the {MAX_FILES:,} Pages cap")
-    elif len(files) > MAX_FILES * 0.8:
-        warn(f"public/ has {len(files):,} files, past 80% of the {MAX_FILES:,} cap")
 
     for p in files:
         size = p.stat().st_size
@@ -249,7 +286,7 @@ def check_limits() -> None:
 def report_duplicates() -> None:
     """Informational: blank tiles repeat heavily and PMTiles would dedupe them."""
     for layer in ("tiles", "wt-overlay"):
-        d = ASSETS / layer
+        d = TILES_SRC / layer
         if not d.is_dir():
             continue
         seen: dict[str, int] = defaultdict(int)
@@ -277,6 +314,8 @@ def main() -> int:
     check_pois(meta, x0, y0, s, bounds)
     check_boss_icons()
     check_pyramids()
+    print("archives:")
+    check_archives()
     check_limits()
 
     print("tile stats:")

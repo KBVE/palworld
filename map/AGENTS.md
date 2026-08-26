@@ -9,8 +9,9 @@ them. Nothing else.
 ## Layout
 
 ```
-public/palworld/tiles/       base tile pyramid (XYZ, z2..z6)
-public/palworld/wt-overlay/  overlay tile pyramid (z3..z8)
+tiles-src/tiles/             base tile pyramid, source (XYZ, z0..z6)
+tiles-src/wt-overlay/        overlay tile pyramid, source (z0..z8)
+public/palworld/*.pmtiles    the packed archives that actually ship
 public/palworld/palicons/    item / creature icons
 public/palworld/ui/          map chrome
 src/map/                     ported map component + marker ECS + live poller
@@ -19,6 +20,23 @@ src/main.tsx                 standalone entry
 ```
 
 ## Rules
+
+**Tiles ship as PMTiles archives, never as loose files.** itch.io refuses
+an HTML5 project with more than 1000 files and the two pyramids are
+~10,600 of them — the first publish uploaded fine and itch rejected the
+zip on processing. Loose tiles live in `tiles-src/`, deliberately outside
+`public/` so vite cannot copy them into a build. After changing them run:
+
+    tools/.venv/bin/python tools/build_pmtiles.py
+
+`pnpm validate` fails if an archive is older than its source, so a stale
+archive cannot ship silently.
+
+The overlay sits at negative tile coordinates, which PMTiles cannot
+address, so each zoom is shifted to a non-negative origin and the shift is
+stored in the archive metadata for `src/map/pmtilesLayer.ts` to undo. Its
+z0 spans two tiles where zoom 0 holds one, so that level is dropped and
+Leaflet upscales z1 via `minNativeZoom`.
 
 **Tiles are generated output — never hand-edit them.** A tile pyramid is
 derived from a source image. If a tile is wrong, the source or the
@@ -30,10 +48,9 @@ the URL hash (`#/lat/lng/z`) so a view can be pasted into Discord. This is
 the main distribution loop, and it is the one thing an iframe embed makes
 harder — do not let it regress.
 
-**Watch the file count.** The two pyramids are ~10,600 files. Cloudflare
-Pages caps a deployment at 20,000, so a new zoom level is a real budget
-decision: each level is 4x the one above it. Before adding z7 to `tiles/`,
-check what the map actually requests — unused depth is pure weight.
+**Watch the file count.** `dist/` is ~105 files against itch's cap of
+1000; Pages allows 20,000. Anything that puts many files into `public/`
+threatens the itch build, which is the tighter of the two.
 
 **Live gameserver state comes from the API, not the build.** Player
 counts, base locations, and server status are fetched at runtime from
@@ -86,9 +103,8 @@ gitignored — upload it to itch by hand.
 
 ## Working here
 
-`public/palworld/` is ~10,700 files. Never `grep`/`find` across it without
-a path filter; scope searches to `src/`, `*.md`, or a single icon
-directory.
+`tiles-src/` is ~10,600 files. Never `grep`/`find` across it without a
+path filter; scope searches to `src/`, `*.md`, or a single icon directory.
 
 Assets keep the `/palworld/` URL prefix they had on the site, so the
 component's tile and icon paths needed no edits and existing deep links

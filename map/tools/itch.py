@@ -25,7 +25,7 @@ except ImportError:
     sys.exit("Pillow is required: pip install Pillow")
 
 ROOT = Path(__file__).resolve().parent.parent
-TILES = ROOT / "public" / "palworld"
+TILES = ROOT / "tiles-src"
 TILE_PX = 256
 
 # itch.io store image sizes.
