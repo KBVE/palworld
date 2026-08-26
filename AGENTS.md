@@ -53,6 +53,15 @@ It parses the projection constants and bounds out of the source rather
 than duplicating them, so retuning the map updates the checks too. Run it
 after touching tiles, icons, or `pois.json`.
 
+`pnpm test:e2e` runs the Playwright suite for what only a browser can
+answer: the map paints, tiles resolve from both pyramids with no 4xx, the
+filter control renders, and live data drives the player count in both the
+populated and offline directions.
+
+Always stub the live endpoints with `page.route`. A test that reaches
+`palworld.kbve.com` depends on the gameserver being up and will fail for
+reasons that have nothing to do with the change under test.
+
 ## Working here
 
 `public/palworld/` is ~10,700 files. Never `grep`/`find` across it without

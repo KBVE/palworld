@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "validate": "python3 e2e/validate_assets.py"
+    "validate": "python3 e2e/validate_assets.py",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@preact/signals": "^2.11.1",
@@ -16,6 +17,7 @@
     "preact": "^10.29.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/leaflet": "^1.9.12",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
