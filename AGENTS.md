@@ -7,11 +7,13 @@ them. Nothing else.
 ## Layout
 
 ```
-public/tiles/       base tile pyramid (XYZ, z2..z6)
-public/wt-overlay/  overlay tile pyramid (z3..z8)
-public/palicons/    item / creature icons
-public/ui/          map chrome
-src/                map application
+public/palworld/tiles/       base tile pyramid (XYZ, z2..z6)
+public/palworld/wt-overlay/  overlay tile pyramid (z3..z8)
+public/palworld/palicons/    item / creature icons
+public/palworld/ui/          map chrome
+src/map/                     ported map component + marker ECS + live poller
+src/events.ts                local event bus (replaces @kbve/droid)
+src/main.tsx                 standalone entry
 ```
 
 ## Rules
@@ -41,7 +43,12 @@ with a wasm/engine export ships to itch instead.
 
 ## Working here
 
-`public/` is ~10,600 files. Never `grep`/`find` across it without a path
-filter; scope searches to `src/`, `*.md`, or a single icon directory.
+`public/palworld/` is ~10,700 files. Never `grep`/`find` across it without
+a path filter; scope searches to `src/`, `*.md`, or a single icon
+directory.
+
+Assets keep the `/palworld/` URL prefix they had on the site, so the
+component's tile and icon paths needed no edits and existing deep links
+stay valid. Do not "tidy" this away without rewriting all 11 call sites.
 
 Commit messages: no `Co-Authored-By` trailers.

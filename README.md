@@ -6,11 +6,12 @@ embedded into `kbve.com`.
 ## Layout
 
 ```
-public/tiles/       base map tile pyramid (XYZ, z2..z6)
-public/wt-overlay/  overlay tile pyramid (z3..z8)
-public/palicons/    item / creature icons
-public/ui/          map chrome
-src/                map application
+public/palworld/tiles/       base map tile pyramid (XYZ, z2..z6)
+public/palworld/wt-overlay/  overlay tile pyramid (z3..z8)
+public/palworld/palicons/    item / creature icons
+public/palworld/ui/          map chrome
+src/map/                     ported map component
+src/main.tsx                 standalone entry
 ```
 
 Tiles and app ship together so the map is one self-contained deployment.
