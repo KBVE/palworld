@@ -1,0 +1,36 @@
+version: 2
+
+# Actions are pinned to commit SHAs, which is safe but freezes them. These
+# updates are what keep the pins from rotting — without them, pinning just
+# means never upgrading.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      rust:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /map
+    schedule:
+      interval: weekly
+    groups:
+      map:
+        patterns: ['*']
+
+  # savetool pins PalworldSaveTools to an exact commit on purpose: save
+  # formats change with game patches. Only the direct requirements here.
+  - package-ecosystem: pip
+    directory: /mods/chef_paldon_yumsay/build
+    schedule:
+      interval: monthly
