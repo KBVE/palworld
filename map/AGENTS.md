@@ -73,8 +73,11 @@ other reasons.
 
 It revalidates, typechecks, and builds before pushing, so a build that
 fails its own checks never reaches the store page. Requires a
-`BUTLER_API_KEY` secret; the workflow fails with a clear message if it is
-missing rather than half-publishing.
+`ITCH_API` secret — the KBVE org secret, exposed to butler as
+`BUTLER_API_KEY`, matching `kbve/brackeys-16`. A new repo does not inherit
+org secrets automatically, so grant this one repository access or the
+push fails on an empty key. The workflow checks for it before building,
+so that failure costs seconds rather than a full build.
 
 `python3 tools/itch.py` regenerates the store images (630x500 cover,
 1920x620 banner) by stitching the real tile pyramid, so the store art

@@ -17,7 +17,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  ITCH_TARGET: kbve/palworld-map
+  ITCH_USER: kbve
+  ITCH_GAME: palworld-map
 
 jobs:
   publish:
@@ -28,12 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Fail before the build rather than after it, so a missing secret
+      # costs seconds instead of a full validate/typecheck/build cycle.
       - name: Require butler credentials
         env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          BUTLER_API_KEY: ${{ secrets.ITCH_API }}
         run: |
-          if [ -z "$BUTLER_API_KEY" ]; then
-            echo "::error::BUTLER_API_KEY is not set. Add it under Settings > Secrets > Actions."
+          if [ -z "${BUTLER_API_KEY}" ]; then
+            echo "::error::ITCH_API resolved empty - check the KBVE org secret's repository visibility."
             exit 1
           fi
 
@@ -69,13 +72,13 @@ jobs:
 
       - name: Push to itch.io
         env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          BUTLER_API_KEY: ${{ secrets.ITCH_API }}
           CHANNEL: ${{ inputs.channel || 'html5' }}
         run: |
           VERSION="${GITHUB_REF_NAME#map-v}"
           [ "$VERSION" = "$GITHUB_REF_NAME" ] && VERSION="${GITHUB_SHA::7}"
-          echo "pushing $ITCH_TARGET:$CHANNEL as $VERSION"
+          echo "pushing ${ITCH_USER}/${ITCH_GAME}:${CHANNEL} as ${VERSION}"
           # --if-changed makes re-runs cheap: butler skips when the build
           # is byte-identical to what the channel already has.
-          "$RUNNER_TEMP/butler/butler" push dist "$ITCH_TARGET:$CHANNEL" \
-            --userversion "$VERSION" --if-changed
+          "$RUNNER_TEMP/butler/butler" push dist "${ITCH_USER}/${ITCH_GAME}:${CHANNEL}" \
+            --userversion "${VERSION}" --if-changed
