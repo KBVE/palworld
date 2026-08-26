@@ -30,7 +30,11 @@ jobs:
       - name: Validate assets
         run: python3 e2e/validate_assets.py
 
+      # working-directory applies to run steps only, so this action needs
+      # the path to package.json spelled out.
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: map/package.json
       - uses: actions/setup-node@v5
         with:
           node-version: 22
