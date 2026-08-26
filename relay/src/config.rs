@@ -1,0 +1,150 @@
+use anyhow::{Context, Result};
+use std::net::SocketAddr;
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct Config {
+    pub rest_addr: String,
+    pub admin_password: String,
+    pub rcon_addr: SocketAddr,
+    pub rcon_password: Option<String>,
+    pub server_id: String,
+    pub irc_server: String,
+    pub irc_port: u16,
+    pub irc_use_tls: bool,
+    pub irc_nick: String,
+    pub irc_channel: String,
+    pub irc_password: Option<String>,
+    pub clickhouse_url: Option<String>,
+    pub clickhouse_user: Option<String>,
+    pub clickhouse_password: Option<String>,
+    pub clickhouse_database: String,
+    pub agones_sdk_http: Option<String>,
+    pub agones_health_interval_secs: u64,
+    pub agones_rest_probe_timeout_secs: u64,
+    pub agones_initial_ready_delay_secs: u64,
+    pub poll_interval_secs: u64,
+    pub chat_log_path: Option<String>,
+    pub live_api_port: u16,
+    pub events_log_path: String,
+    pub boss_respawn_secs: u64,
+    pub save_intel_path: String,
+}
+
+impl Config {
+    pub fn from_env() -> Result<Self> {
+        Ok(Self {
+            rest_addr: std::env::var("PALWORLD_REST_ADDR")
+                .unwrap_or_else(|_| "http://127.0.0.1:8212".into()),
+            admin_password: std::env::var("PALWORLD_ADMIN_PASSWORD")
+                .context("PALWORLD_ADMIN_PASSWORD env var is required")?,
+            rcon_addr: std::env::var("PALWORLD_RCON_ADDR")
+                .unwrap_or_else(|_| "127.0.0.1:25575".into())
+                .parse()
+                .context("PALWORLD_RCON_ADDR not a valid socket address")?,
+            rcon_password: std::env::var("PALWORLD_RCON_PASSWORD").ok(),
+            server_id: std::env::var("PALWORLD_SERVER_ID")
+                .unwrap_or_else(|_| "palworld-default".into()),
+            irc_server: std::env::var("IRC_SERVER").unwrap_or_else(|_| "irc.kbve.com".into()),
+            irc_port: parse_env_u16("IRC_PORT", 6697)?,
+            irc_use_tls: parse_env_bool("IRC_USE_TLS", true),
+            irc_nick: std::env::var("IRC_NICK").unwrap_or_else(|_| "palworld-bot".into()),
+            irc_channel: std::env::var("IRC_CHANNEL").unwrap_or_else(|_| "#general".into()),
+            irc_password: std::env::var("IRC_PASSWORD").ok(),
+            clickhouse_url: std::env::var("CLICKHOUSE_URL").ok(),
+            clickhouse_user: std::env::var("CLICKHOUSE_USER").ok(),
+            clickhouse_password: std::env::var("CLICKHOUSE_PASSWORD").ok(),
+            clickhouse_database: std::env::var("CLICKHOUSE_DATABASE")
+                .unwrap_or_else(|_| "gameops".into()),
+            agones_sdk_http: std::env::var("AGONES_SDK_HTTP").ok(),
+            agones_health_interval_secs: parse_env_u64("AGONES_HEALTH_INTERVAL_SECS", 5)?,
+            agones_rest_probe_timeout_secs: parse_env_u64("AGONES_REST_PROBE_TIMEOUT_SECS", 2)?,
+            agones_initial_ready_delay_secs: parse_env_u64("AGONES_INITIAL_READY_DELAY_SECS", 60)?,
+            poll_interval_secs: parse_env_u64("PALWORLD_POLL_INTERVAL_SECS", 10)?,
+            chat_log_path: std::env::var("CHAT_LOG_PATH").ok(),
+            live_api_port: parse_env_u16("LIVE_API_PORT", 8300)?,
+            events_log_path: std::env::var("EVENTS_LOG_PATH")
+                .unwrap_or_else(|_| "/shared/chat/events.log".into()),
+            boss_respawn_secs: parse_env_u64("BOSS_RESPAWN_SECS", 3600)?,
+            save_intel_path: std::env::var("SAVE_INTEL_PATH")
+                .unwrap_or_else(|_| "/intel/bases.json".into()),
+        })
+    }
+}
+
+fn parse_env_u64(name: &str, default: u64) -> Result<u64> {
+    match std::env::var(name).ok() {
+        Some(s) => s.parse().with_context(|| format!("{name} not a u64")),
+        None => Ok(default),
+    }
+}
+
+fn parse_env_u16(name: &str, default: u16) -> Result<u16> {
+    match std::env::var(name).ok() {
+        Some(s) => s.parse().with_context(|| format!("{name} not a u16")),
+        None => Ok(default),
+    }
+}
+
+fn parse_env_bool(name: &str, default: bool) -> bool {
+    std::env::var(name)
+        .ok()
+        .map(|s| matches!(s.to_lowercase().as_str(), "true" | "1" | "yes" | "on"))
+        .unwrap_or(default)
+}
+
+/// Serializes tests that mutate the process-global environment. `Config`
+/// tests set/remove env vars, so they must not run concurrently with each
+/// other (or with other crates' tests that build a `Config`). Poison-tolerant
+/// so one failing test does not cascade.
+#[cfg(test)]
+pub(crate) fn env_test_guard() -> std::sync::MutexGuard<'static, ()> {
+    static ENV_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    ENV_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn defaults_apply_when_unset() {
+        let _g = super::env_test_guard();
+        unsafe {
+            std::env::set_var("PALWORLD_ADMIN_PASSWORD", "pw");
+            std::env::remove_var("PALWORLD_REST_ADDR");
+            std::env::remove_var("PALWORLD_POLL_INTERVAL_SECS");
+        }
+        let cfg = Config::from_env().unwrap();
+        assert_eq!(cfg.rest_addr, "http://127.0.0.1:8212");
+        assert_eq!(cfg.poll_interval_secs, 10);
+        assert_eq!(cfg.agones_initial_ready_delay_secs, 60);
+        assert_eq!(cfg.clickhouse_database, "gameops");
+    }
+
+    #[test]
+    fn chat_log_path_defaults_none_and_reads_env() {
+        let _g = super::env_test_guard();
+        unsafe {
+            std::env::set_var("PALWORLD_ADMIN_PASSWORD", "pw");
+            std::env::remove_var("CHAT_LOG_PATH");
+        }
+        assert_eq!(Config::from_env().unwrap().chat_log_path, None);
+        unsafe {
+            std::env::set_var("CHAT_LOG_PATH", "/shared/chat.log");
+        }
+        assert_eq!(
+            Config::from_env().unwrap().chat_log_path,
+            Some("/shared/chat.log".to_string())
+        );
+    }
+
+    #[test]
+    fn admin_password_required() {
+        let _g = super::env_test_guard();
+        unsafe {
+            std::env::remove_var("PALWORLD_ADMIN_PASSWORD");
+        }
+        assert!(Config::from_env().is_err());
+    }
+}

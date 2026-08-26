@@ -1,0 +1,27 @@
+[package]
+name = "agones-palworld-relay"
+authors = ["kbve", "h0lybyte"]
+version = "0.0.1"
+edition = "2021"
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow = { workspace = true }
+axum = { workspace = true, features = ["http1", "json", "tokio"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["default", "macros", "rt-multi-thread", "fs", "io-util", "sync", "time", "signal", "net"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["default", "env-filter"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+futures = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+reqwest = { workspace = true, features = ["rustls", "json"] }
+chrono = { workspace = true, features = ["clock", "serde"] }
+# Published release rather than a monorepo path: this repo must build on
+# its own. Used for jedi::rcon and jedi::state::sidecar::ClickHouseConfig.
+jedi = { version = "0.2.3", features = ["clickhouse"] }
+tokio-rustls = { workspace = true, features = ["ring"] }
+webpki-roots = { workspace = true }
+rustls = { workspace = true, features = ["ring", "std", "tls12"] }

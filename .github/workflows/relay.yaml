@@ -1,0 +1,29 @@
+name: relay
+
+on:
+  push:
+    branches: [main]
+    paths: ['relay/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/relay.yaml']
+  pull_request:
+    paths: ['relay/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/relay.yaml']
+
+concurrency:
+  group: relay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace

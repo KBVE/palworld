@@ -1,0 +1,60 @@
+name: mods
+
+on:
+  push:
+    branches: [main]
+    paths: ['mods/**', '.github/workflows/mods.yaml']
+  pull_request:
+    paths: ['mods/**', '.github/workflows/mods.yaml']
+
+concurrency:
+  group: mods-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chef:
+    # The only mod with a build step: python that generates placeholder art
+    # and validates the food TOMLs.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mods/chef_paldon_yumsay/build
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install -r requirements.txt pytest
+      - name: Test
+        run: python -m pytest -q
+
+  lua:
+    # No Lua runtime in the mod loader's shape here, so this is a syntax
+    # gate rather than a test suite — enough to catch a broken script
+    # before it reaches a live server.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install luac
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4
+      - name: Syntax check
+        run: |
+          FAILED=0
+          while IFS= read -r f; do
+            luac5.4 -p "$f" || { echo "::error file=$f::lua syntax error"; FAILED=1; }
+          done < <(find mods -name '*.lua')
+          exit $FAILED
+
+  json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate JSON
+        run: |
+          FAILED=0
+          while IFS= read -r f; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" \
+              || { echo "::error file=$f::invalid JSON"; FAILED=1; }
+          done < <(find mods -name '*.json')
+          exit $FAILED

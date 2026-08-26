@@ -1,0 +1,28 @@
+# Standalone workspace for the palworld services.
+#
+# Versions are lifted from the monorepo's workspace so the relay builds
+# identically here, minus the path dependency on packages/rust/jedi,
+# which now comes from crates.io.
+[workspace]
+resolver = "2"
+members = ["relay"]
+
+[workspace.package]
+rust-version = "1.96"
+
+[workspace.dependencies]
+anyhow = "1.0"
+axum = { version = "0.8.9", default-features = false }
+chrono = { version = "0.4.44", default-features = false }
+futures = "0.3"
+reqwest = { version = "0.13.4", default-features = false }
+rustls = { version = "0.23", default-features = false }
+serde = "1.0"
+serde_json = "1.0"
+thiserror = "2.0.12"
+tokio = { version = "1.49", default-features = false }
+tokio-rustls = { version = "0.26", default-features = false }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false }
+uuid = "1"
+webpki-roots = "1.0"
