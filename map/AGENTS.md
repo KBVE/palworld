@@ -85,13 +85,20 @@ reasons that have nothing to do with the change under test.
 
 ## Publishing
 
-The map ships to itch.io as a static build. `.github/workflows/publish-itch.yaml`
-runs on `workflow_dispatch` or a `map-v*` tag — deliberately not on every
-push to main, since an itch upload is a public release and main moves for
-other reasons.
+The map ships to itch.io as a static build.
+`.github/workflows/publish-itch.yaml` is version-driven: `version` in
+`map/package.json` is the source of truth, and a release happens when that
+number changes. Every other push to `map/**` reaches the workflow and
+stops, because a tag `map-v<version>` already exists.
 
-It revalidates, typechecks, and builds before pushing, so a build that
-fails its own checks never reaches the store page. Requires a
+Bump `version` to publish. Never reuse one — republishing overwrites a
+build people may already have open, and the tag check refuses it. The
+build name shown on itch is that version, which is why nothing here falls
+back to a commit hash.
+
+It validates, typechecks, builds, and runs the full e2e suite before
+pushing, so a build that fails its own checks never reaches the store
+page, then tags `map-v<version>` and cuts a GitHub release. Requires a
 `ITCH_API` secret — the KBVE org secret, exposed to butler as
 `BUTLER_API_KEY`, matching `kbve/brackeys-16`. Its visibility is `all`, so
 every org repo including this one already has it; nothing to configure.
